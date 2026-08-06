@@ -1,4 +1,5 @@
 import pool from './db.js';
+import bcrypt from 'bcrypt';
 
 const STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS usuarios (
@@ -78,9 +79,20 @@ const STATEMENTS = [
     fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     fecha_resolucion TIMESTAMP
   )`,
+  `CREATE TABLE IF NOT EXISTS auditoria (
+    id BIGSERIAL PRIMARY KEY,
+    usuario_id INTEGER REFERENCES usuarios(id) ON DELETE SET NULL,
+    accion VARCHAR(80) NOT NULL,
+    modulo VARCHAR(80) NOT NULL,
+    detalle JSONB NOT NULL DEFAULT '{}'::jsonb,
+    direccion_ip VARCHAR(64),
+    fecha TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`,
   `CREATE INDEX IF NOT EXISTS idx_alertas_activa ON alertas(activa)`,
   `CREATE INDEX IF NOT EXISTS idx_alertas_gravedad ON alertas(gravedad)`,
-  `CREATE INDEX IF NOT EXISTS idx_alertas_fecha ON alertas(fecha_creacion)`
+  `CREATE INDEX IF NOT EXISTS idx_alertas_fecha ON alertas(fecha_creacion)`,
+  `CREATE INDEX IF NOT EXISTS idx_auditoria_fecha ON auditoria(fecha DESC)`,
+  `CREATE INDEX IF NOT EXISTS idx_auditoria_usuario ON auditoria(usuario_id)`
 ];
 
 export async function initializeDatabase() {
@@ -100,7 +112,7 @@ export async function initializeDatabase() {
   if (adminExists.rows.length === 0) {
     await pool.query(
       'INSERT INTO usuarios (nombre, usuario, password, rol) VALUES ($1, $2, $3, $4)',
-      ['Administrador', 'admin', 'admin123', 'administrador']
+      ['Administrador', 'admin', await bcrypt.hash('admin123', 12), 'administrador']
     );
     console.log('Usuario admin creado (admin / admin123).');
   } else {
@@ -111,7 +123,7 @@ export async function initializeDatabase() {
 
   const tablas = await pool.query(
     "SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename = ANY($1::text[]) ORDER BY tablename",
-    [['usuarios', 'impresoras', 'suministros', 'movimientos_suministros', 'mantenimientos', 'registros_diarios', 'alertas']]
+    [['usuarios', 'impresoras', 'suministros', 'movimientos_suministros', 'mantenimientos', 'registros_diarios', 'alertas', 'auditoria']]
   );
   console.log('Tablas SICIS listas:', tablas.rows.map(r => r.tablename).join(', '));
 }

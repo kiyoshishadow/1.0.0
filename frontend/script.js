@@ -28,7 +28,8 @@ const ACCESO_MODULOS = {
   mantenimientos: ['administrador', 'supervisor', 'tecnico'],
   registros: ['administrador', 'supervisor', 'operario'],
   reportes: ['administrador', 'supervisor'],
-  configuracion: ['administrador']
+  configuracion: ['administrador'],
+  auditoria: ['administrador']
 };
 
 function normalizarRol(rol) {
@@ -188,7 +189,8 @@ function mostrarSeccion(seccion) {
     mantenimientos: cargarMantenimientos,
     registros: cargarRegistros,
     reportes: () => { cargarReporteConsumo(); cargarReporteToner(); cargarReporteProyeccion(); },
-    configuracion: cargarUsuarios
+    configuracion: cargarUsuarios,
+    auditoria: cargarAuditoria
   };
   loaders[seccion]?.();
 }
@@ -1306,6 +1308,51 @@ async function eliminarUsuario(id) {
   } catch (err) {
     mostrarMensaje(err.message, true);
   }
+}
+
+// --- BITÁCORA DE AUDITORÍA ---
+
+function escaparHTML(valor) {
+  const node = document.createElement('span');
+  node.textContent = String(valor ?? '');
+  return node.innerHTML;
+}
+
+function parametrosAuditoria() {
+  const params = new URLSearchParams();
+  const accion = document.getElementById('filtro-auditoria-accion')?.value.trim();
+  const desde = document.getElementById('filtro-auditoria-desde')?.value;
+  const hasta = document.getElementById('filtro-auditoria-hasta')?.value;
+  if (accion) params.set('accion', accion);
+  if (desde) params.set('desde', desde);
+  if (hasta) params.set('hasta', hasta);
+  return params;
+}
+
+async function cargarAuditoria() {
+  try {
+    const lista = await fetchAPI(`/auditoria?${parametrosAuditoria()}`);
+    document.getElementById('tabla-auditoria').innerHTML = lista.map(item => `
+      <tr>
+        <td>${escaparHTML(new Date(item.fecha).toLocaleString('es-SV'))}</td>
+        <td>${escaparHTML(item.usuario || item.usuario_nombre || 'Sistema')}</td>
+        <td>${escaparHTML(item.accion)}</td>
+        <td>${escaparHTML(item.modulo)}</td>
+        <td>${escaparHTML(item.direccion_ip || '-')}</td>
+        <td><code>${escaparHTML(JSON.stringify(item.detalle || {}))}</code></td>
+      </tr>
+    `).join('') || '<tr><td colspan="6" style="text-align:center">Sin acciones registradas</td></tr>';
+  } catch (err) {
+    mostrarMensaje(err.message, true);
+  }
+}
+
+function exportarAuditoriaCSV() {
+  window.location.href = `${API_URL}/auditoria/exportar/csv?${parametrosAuditoria()}`;
+}
+
+function imprimirAuditoria() {
+  window.print();
 }
 
 // --- ARRANQUE ---

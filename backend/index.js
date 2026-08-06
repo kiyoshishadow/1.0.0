@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import session from 'express-session';
+import bcrypt from 'bcrypt';
 import pool, { testConnection } from './db.js';
 import { initializeDatabase } from './db-init.js';
 import path from 'path';
@@ -8,27 +9,59 @@ import { fileURLToPath } from 'url';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+const SESSION_SECRET = process.env.SESSION_SECRET;
+const SESSION_TTL_MS = Number(process.env.SESSION_TTL_MS || 8 * 60 * 60 * 1000);
+const ALLOWED_ORIGINS = (process.env.CORS_ORIGIN || '')
+  .split(',').map(origin => origin.trim()).filter(Boolean);
+const loginAttempts = new Map();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+if (IS_PRODUCTION && !SESSION_SECRET) {
+  throw new Error('SESSION_SECRET es obligatorio en producción');
+}
+
+app.set('trust proxy', 1);
+app.disable('x-powered-by');
+app.use((req, res, next) => {
+  res.set({
+    'Content-Security-Policy': "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'",
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'Permissions-Policy': 'geolocation=(), microphone=(), camera=()'
+  });
+  next();
+});
 app.use(cors({
-  origin: true,
+  origin: ALLOWED_ORIGINS.length ? ALLOWED_ORIGINS : false,
   credentials: true
 }));
-app.use(express.json());
-app.use(express.static(path.join(__dirname, '../frontend')));
+app.use(express.json({ limit: '100kb' }));
 app.use(session({
-  secret: 'sicis-control-impresiones-secret',
+  name: 'sicis.sid',
+  secret: SESSION_SECRET || 'solo-desarrollo-cambie-esta-clave',
   resave: false,
   saveUninitialized: false,
   cookie: {
-    maxAge: 24 * 60 * 60 * 1000,
+    maxAge: SESSION_TTL_MS,
     httpOnly: true,
     sameSite: 'lax',
-    secure: false
+    secure: IS_PRODUCTION
   }
 }));
+app.use((req, res, next) => {
+  if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) return next();
+  const origin = req.get('origin');
+  const ownOrigin = `${req.protocol}://${req.get('host')}`;
+  if (origin && origin !== ownOrigin && !ALLOWED_ORIGINS.includes(origin)) {
+    return res.status(403).json({ error: 'Solicitud rechazada por protección CSRF' });
+  }
+  next();
+});
+app.use(express.static(path.join(__dirname, '../frontend')));
 
 const ROLES = ['administrador', 'supervisor', 'operario', 'tecnico'];
 
@@ -41,12 +74,9 @@ function normalizarRol(rol) {
 }
 
 function requireAuth(req, res, next) {
-  console.log(`Auth check - Method: ${req.method}, Path: ${req.path}, Session:`, req.session);
   if (!req.session?.usuario_id) {
-    console.log('Auth failed: No usuario_id in session');
     return res.status(401).json({ error: 'No autenticado' });
   }
-  console.log('Auth passed');
   next();
 }
 
@@ -54,15 +84,63 @@ function requireRoles(...roles) {
   return (req, res, next) => {
     const rol = normalizarRol(req.session?.rol);
     const permitidos = roles.map(normalizarRol);
-    console.log(`Role check - User rol: ${rol}, Required roles: ${permitidos}`);
     if (!rol || !permitidos.includes(rol)) {
-      console.log('Role check failed');
       return res.status(403).json({ error: 'No autorizado' });
     }
-    console.log('Role check passed');
     next();
   };
 }
+
+function validarPassword(password) {
+  return typeof password === 'string' && password.length >= 10 &&
+    /[a-z]/.test(password) && /[A-Z]/.test(password) && /\d/.test(password);
+}
+
+function getClientIp(req) {
+  return (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').toString().split(',')[0].trim().slice(0, 64);
+}
+
+async function registrarAuditoria(req, accion, modulo, detalle = {}, client = pool) {
+  try {
+    await client.query(
+      `INSERT INTO auditoria (usuario_id, accion, modulo, detalle, direccion_ip)
+       VALUES ($1, $2, $3, $4::jsonb, $5)`,
+      [req.session?.usuario_id || null, accion, modulo, JSON.stringify(detalle), getClientIp(req)]
+    );
+  } catch (error) {
+    console.error('No se pudo registrar auditoría:', error.message);
+  }
+}
+
+function loginRateLimit(req, res, next) {
+  const key = getClientIp(req);
+  const now = Date.now();
+  const state = loginAttempts.get(key) || { count: 0, firstAttempt: now, blockedUntil: 0 };
+  if (state.blockedUntil > now) {
+    return res.status(429).json({ error: 'Demasiados intentos. Intente de nuevo en unos minutos.' });
+  }
+  if (now - state.firstAttempt > 15 * 60 * 1000) Object.assign(state, { count: 0, firstAttempt: now, blockedUntil: 0 });
+  req.loginRateState = state;
+  next();
+}
+
+function registrarIntentoFallido(req) {
+  const state = req.loginRateState || { count: 0, firstAttempt: Date.now(), blockedUntil: 0 };
+  state.count += 1;
+  if (state.count >= 5) state.blockedUntil = Date.now() + 15 * 60 * 1000;
+  loginAttempts.set(getClientIp(req), state);
+}
+
+// Registra automáticamente las operaciones críticas exitosas sin almacenar contraseñas.
+app.use((req, res, next) => {
+  if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method) || ['/login', '/logout'].includes(req.path)) return next();
+  res.on('finish', () => {
+    if (res.statusCode < 400 && req.session?.usuario_id) {
+      registrarAuditoria(req, `${req.method} ${req.path}`, req.path.split('/')[1] || 'sistema');
+    }
+  });
+  next();
+});
 
 function puedeVerModulo(rol, modulo) {
   const r = normalizarRol(rol);
@@ -73,7 +151,8 @@ function puedeVerModulo(rol, modulo) {
     mantenimientos: ['administrador', 'supervisor', 'tecnico'],
     registros: ['administrador', 'supervisor', 'operario'],
     reportes: ['administrador', 'supervisor'],
-    configuracion: ['administrador']
+    configuracion: ['administrador'],
+    auditoria: ['administrador']
   };
   return (acceso[modulo] || []).includes(r);
 }
@@ -101,7 +180,7 @@ app.get('/sesion', (req, res) => {
   });
 });
 
-app.post('/login', async (req, res) => {
+app.post('/login', loginRateLimit, async (req, res) => {
   try {
     const { usuario, password } = req.body;
     if (!usuario || !password) {
@@ -109,21 +188,32 @@ app.post('/login', async (req, res) => {
     }
 
     const result = await pool.query(
-      'SELECT id, nombre, usuario, rol, activo FROM usuarios WHERE usuario = $1 AND password = $2 AND activo = true',
-      [usuario, password]
+      'SELECT id, nombre, usuario, password, rol, activo FROM usuarios WHERE usuario = $1 AND activo = true',
+      [usuario.trim()]
     );
 
-    if (result.rows.length === 0) {
+    const user = result.rows[0];
+    const passwordHash = user?.password || '';
+    const isHash = passwordHash.startsWith('$2a$') || passwordHash.startsWith('$2b$');
+    const passwordOk = user && (isHash ? await bcrypt.compare(password, passwordHash) : password === passwordHash);
+    if (!passwordOk) {
+      registrarIntentoFallido(req);
+      await registrarAuditoria(req, 'LOGIN_FALLIDO', 'autenticacion', { usuario: String(usuario).slice(0, 50) });
       return res.status(401).json({ error: 'Usuario o contraseña incorrectos. Verifica tus datos e inténtalo nuevamente.' });
     }
 
-    const user = result.rows[0];
+    if (!isHash) {
+      await pool.query('UPDATE usuarios SET password = $1 WHERE id = $2', [await bcrypt.hash(password, 12), user.id]);
+    }
     const rol = normalizarRol(user.rol);
 
+    await new Promise((resolve, reject) => req.session.regenerate(error => error ? reject(error) : resolve()));
     req.session.usuario_id = user.id;
     req.session.nombre = user.nombre;
     req.session.usuario = user.usuario;
     req.session.rol = rol;
+    loginAttempts.delete(getClientIp(req));
+    await registrarAuditoria(req, 'LOGIN_EXITOSO', 'autenticacion', { usuario: user.usuario });
 
     res.json({
       ok: true,
@@ -137,7 +227,9 @@ app.post('/login', async (req, res) => {
 });
 
 app.post('/logout', (req, res) => {
+  registrarAuditoria(req, 'LOGOUT', 'autenticacion', { usuario: req.session?.usuario });
   req.session.destroy(() => {
+    res.clearCookie('sicis.sid');
     res.json({ message: 'Sesión cerrada' });
   });
 });
@@ -644,9 +736,12 @@ app.post('/usuarios', requireAuth, requireRoles('administrador'), async (req, re
     if (!ROLES.includes(normalizarRol(rol))) {
       return res.status(400).json({ error: 'Rol inválido' });
     }
+    if (!validarPassword(password)) {
+      return res.status(400).json({ error: 'La contraseña debe tener 10 caracteres, mayúscula, minúscula y número' });
+    }
     const result = await pool.query(
       'INSERT INTO usuarios (nombre, usuario, password, rol, activo) VALUES ($1, $2, $3, $4, $5) RETURNING id, nombre, usuario, rol, activo, creado_en',
-      [nombre.trim(), usuario.trim(), password, normalizarRol(rol), activo !== false]
+      [nombre.trim(), usuario.trim(), await bcrypt.hash(password, 12), normalizarRol(rol), activo !== false]
     );
     res.status(201).json(result.rows[0]);
   } catch (error) {
@@ -668,10 +763,14 @@ app.put('/usuarios/:id', requireAuth, requireRoles('administrador'), async (req,
       return res.status(400).json({ error: 'Rol inválido' });
     }
 
+    if (password && !validarPassword(password)) {
+      return res.status(400).json({ error: 'La contraseña debe tener 10 caracteres, mayúscula, minúscula y número' });
+    }
+
     let query, params;
     if (password) {
       query = 'UPDATE usuarios SET nombre=$1, usuario=$2, password=$3, rol=$4, activo=$5 WHERE id=$6 RETURNING id, nombre, usuario, rol, activo, creado_en';
-      params = [nombre.trim(), usuario.trim(), password, normalizarRol(rol), activo !== false, req.params.id];
+      params = [nombre.trim(), usuario.trim(), await bcrypt.hash(password, 12), normalizarRol(rol), activo !== false, req.params.id];
     } else {
       query = 'UPDATE usuarios SET nombre=$1, usuario=$2, rol=$3, activo=$4 WHERE id=$5 RETURNING id, nombre, usuario, rol, activo, creado_en';
       params = [nombre.trim(), usuario.trim(), normalizarRol(rol), activo !== false, req.params.id];
@@ -717,6 +816,57 @@ app.delete('/alertas/:id', requireAuth, requireRoles('administrador', 'superviso
   } catch (error) {
     console.error('Error cerrando alerta:', error);
     res.status(500).json({ error: 'Error interno' });
+  }
+});
+
+// --- BITÁCORA DE AUDITORÍA ---
+
+async function consultarAuditoria(query) {
+  const { usuario_id, modulo, accion, desde, hasta, limit = 200 } = query;
+  const clauses = [];
+  const values = [];
+  const add = (sql, value) => { values.push(value); clauses.push(sql.replace('?', `$${values.length}`)); };
+  if (usuario_id) add('a.usuario_id = ?', Number(usuario_id));
+  if (modulo) add('a.modulo = ?', String(modulo).slice(0, 80));
+  if (accion) add('a.accion ILIKE ?', `%${String(accion).slice(0, 80)}%`);
+  if (desde) add('a.fecha >= ?::date', desde);
+  if (hasta) add("a.fecha < (?::date + INTERVAL '1 day')", hasta);
+  values.push(Math.min(Math.max(Number(limit) || 200, 1), 1000));
+  const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
+  return pool.query(
+    `SELECT a.id, a.accion, a.modulo, a.detalle, a.direccion_ip, a.fecha,
+            u.nombre AS usuario_nombre, u.usuario AS usuario
+     FROM auditoria a LEFT JOIN usuarios u ON u.id = a.usuario_id
+     ${where} ORDER BY a.fecha DESC LIMIT $${values.length}`,
+    values
+  );
+}
+
+app.get('/auditoria', requireAuth, requireRoles('administrador'), async (req, res) => {
+  try {
+    const result = await consultarAuditoria(req.query);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error consultando auditoría:', error);
+    res.status(500).json({ error: 'No se pudo consultar la bitácora' });
+  }
+});
+
+app.get('/auditoria/exportar/csv', requireAuth, requireRoles('administrador'), async (req, res) => {
+  try {
+    const result = await consultarAuditoria({ ...req.query, limit: 1000 });
+    const quote = value => `"${String(value ?? '').replaceAll('"', '""')}"`;
+    const lines = [
+      ['Fecha', 'Usuario', 'Acción', 'Módulo', 'IP', 'Detalle'].map(quote).join(','),
+      ...result.rows.map(row => [row.fecha?.toISOString?.() || row.fecha, row.usuario || row.usuario_nombre || 'Sistema', row.accion, row.modulo, row.direccion_ip, JSON.stringify(row.detalle)].map(quote).join(','))
+    ];
+    res.set({
+      'Content-Type': 'text/csv; charset=utf-8',
+      'Content-Disposition': 'attachment; filename="sicis-bitacora.csv"'
+    }).send(`\uFEFF${lines.join('\n')}`);
+  } catch (error) {
+    console.error('Error exportando auditoría:', error);
+    res.status(500).json({ error: 'No se pudo exportar la bitácora' });
   }
 });
 

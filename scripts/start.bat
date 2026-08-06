@@ -6,6 +6,15 @@ echo.
 
 cd /d "%~dp0..\backend"
 
+echo Verificando dependencias...
+call npm install --no-audit --no-fund
+if errorlevel 1 (
+  echo ERROR: No se pudieron instalar las dependencias del backend.
+  pause
+  exit /b 1
+)
+echo.
+
 echo Deteniendo backend previo en puerto 3001...
 call npm run stop >nul 2>&1
 echo.

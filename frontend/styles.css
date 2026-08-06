@@ -1666,3 +1666,35 @@ body.dark-mode .form-card-group textarea::placeholder {
   .sidebar-nav { flex-direction: row; flex-wrap: wrap; }
   .dashboard-grid { grid-template-columns: 1fr; }
 }
+
+.auditoria-filtros input[type="date"] {
+  min-height: 42px;
+  border: 1px solid var(--border-color, #d1d5db);
+  border-radius: 8px;
+  padding: 0 12px;
+  background: var(--surface-color, #fff);
+  color: var(--text-primary);
+}
+
+#tabla-auditoria code {
+  display: block;
+  max-width: 360px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .auditoria-filtros { align-items: stretch; }
+  .auditoria-filtros .buscador,
+  .auditoria-filtros input[type="date"],
+  .auditoria-filtros button { width: 100%; }
+}
+
+@media print {
+  .header, .sidebar, .footer, .mensaje-sistema, .auditoria-filtros { display: none !important; }
+  .seccion-panel { display: none !important; }
+  #panel-auditoria { display: block !important; }
+  .app-content, .main-container { padding: 0 !important; margin: 0 !important; }
+  .tabla-wrapper { overflow: visible !important; border: 0 !important; }
+}

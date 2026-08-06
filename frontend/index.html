@@ -69,6 +69,7 @@
         <a href="#" class="sidebar-link" data-seccion="registros" id="nav-registros">Registro diario</a>
         <a href="#" class="sidebar-link" data-seccion="reportes" id="nav-reportes">Reportes</a>
         <a href="#" class="sidebar-link" data-seccion="configuracion" id="nav-configuracion">Configuración</a>
+        <a href="#" class="sidebar-link" data-seccion="auditoria" id="nav-auditoria">Bitácora</a>
       </nav>
     </aside>
 
@@ -306,6 +307,27 @@
             <table>
               <thead><tr><th>Nombre</th><th>Usuario</th><th>Rol</th><th>Estado</th><th>Acciones</th></tr></thead>
               <tbody id="tabla-usuarios"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="seccion-panel" id="panel-auditoria">
+        <div class="main-container">
+          <h1 class="titulo-principal">Bitácora de auditoría</h1>
+          <p class="descripcion">Trazabilidad de las acciones críticas del sistema.</p>
+          <div class="toolbar auditoria-filtros">
+            <input type="search" id="filtro-auditoria-accion" class="buscador" placeholder="Buscar por acción"/>
+            <input type="date" id="filtro-auditoria-desde" aria-label="Desde"/>
+            <input type="date" id="filtro-auditoria-hasta" aria-label="Hasta"/>
+            <button class="btn-secundario" type="button" onclick="cargarAuditoria()">Filtrar</button>
+            <button class="btn-secundario" type="button" onclick="exportarAuditoriaCSV()">Exportar CSV</button>
+            <button class="btn-principal" type="button" onclick="imprimirAuditoria()">Guardar PDF</button>
+          </div>
+          <div class="tabla-wrapper" id="auditoria-para-imprimir">
+            <table>
+              <thead><tr><th>Fecha</th><th>Usuario</th><th>Acción</th><th>Módulo</th><th>IP</th><th>Detalle</th></tr></thead>
+              <tbody id="tabla-auditoria"></tbody>
             </table>
           </div>
         </div>

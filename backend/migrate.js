@@ -133,6 +133,21 @@ async function migrarBaseDeDatos() {
       }
     }
 
+    // Bitácora inmutable de acciones críticas.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS auditoria (
+        id BIGSERIAL PRIMARY KEY,
+        usuario_id INTEGER REFERENCES usuarios(id) ON DELETE SET NULL,
+        accion VARCHAR(80) NOT NULL,
+        modulo VARCHAR(80) NOT NULL,
+        detalle JSONB NOT NULL DEFAULT '{}'::jsonb,
+        direccion_ip VARCHAR(64),
+        fecha TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    await client.query('CREATE INDEX IF NOT EXISTS idx_auditoria_fecha ON auditoria(fecha DESC)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_auditoria_usuario ON auditoria(usuario_id)');
+
     await client.query('COMMIT');
 
     console.log('\n✅ Migración unificada completada exitosamente');
