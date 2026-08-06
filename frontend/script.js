@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:3001';
+const API_URL = window.location.origin;
 
 let usuarioRol = null;
 let usuarioId = null;
@@ -1148,12 +1148,39 @@ function mostrarTabReporte(tab) {
   document.querySelector(`.tab-btn[data-tab="${tab}"]`)?.classList.add('active');
 }
 
+function periodoSeleccionado() {
+  return document.getElementById('reporte-periodo')?.value || new Date().toISOString().slice(0, 7);
+}
+
+function recargarReportes() {
+  cargarReporteConsumo();
+  cargarReporteToner();
+  cargarReporteProyeccion();
+}
+
+function exportarReporteExcel() {
+  const tabla = document.querySelector('.tab-reporte.active table');
+  const titulo = document.querySelector('.tab-btn.active')?.textContent.trim() || 'reporte';
+  if (!tabla) return;
+  const contenido = `<!doctype html><html><head><meta charset="utf-8"></head><body><h1>${escaparHTML(titulo)}</h1>${tabla.outerHTML}</body></html>`;
+  const blob = new Blob([contenido], { type: 'application/vnd.ms-excel;charset=utf-8' });
+  const enlace = document.createElement('a');
+  enlace.href = URL.createObjectURL(blob);
+  enlace.download = `sicis-${titulo.toLowerCase().replaceAll(/[^a-záéíóúñ0-9]+/gi, '-')}-${periodoSeleccionado()}.xls`;
+  enlace.click();
+  URL.revokeObjectURL(enlace.href);
+}
+
+function imprimirReporte() {
+  window.print();
+}
+
 async function cargarReporteConsumo() {
   try {
-    const lista = await fetchAPI('/reportes/consumo-mensual');
+    const lista = await fetchAPI(`/reportes/consumo-mensual?periodo=${encodeURIComponent(periodoSeleccionado())}`);
     document.getElementById('tabla-reporte-consumo').innerHTML = lista.map(r => `
       <tr>
-        <td>${r.impresora}</td>
+        <td>${escaparHTML(r.impresora)}</td>
         <td>${r.papel_total}</td>
         <td>${r.contador_minimo}</td>
         <td>${r.contador_maximo}</td>
@@ -1166,9 +1193,9 @@ async function cargarReporteConsumo() {
 
 async function cargarReporteToner() {
   try {
-    const lista = await fetchAPI('/reportes/toner');
+    const lista = await fetchAPI(`/reportes/toner?periodo=${encodeURIComponent(periodoSeleccionado())}`);
     document.getElementById('tabla-reporte-toner').innerHTML = lista.map(r => `
-      <tr><td>${r.impresora}</td><td>${r.cambios_toner}</td></tr>
+      <tr><td>${escaparHTML(r.impresora)}</td><td>${r.cambios_toner}</td></tr>
     `).join('') || '<tr><td colspan="2" style="text-align:center">Sin datos</td></tr>';
 
     const ctx = document.getElementById('chart-toner');
@@ -1193,7 +1220,7 @@ async function cargarReporteProyeccion() {
     const lista = await fetchAPI('/reportes/proyeccion');
     document.getElementById('tabla-reporte-proyeccion').innerHTML = lista.map(r => `
       <tr>
-        <td>${r.suministro}</td>
+        <td>${escaparHTML(r.suministro)}</td>
         <td>${r.cantidad_actual}</td>
         <td>${r.consumo_30_dias}</td>
         <td>${r.dias_restantes ?? '-'}</td>
@@ -1358,6 +1385,8 @@ function imprimirAuditoria() {
 // --- ARRANQUE ---
 
 document.addEventListener('DOMContentLoaded', async () => {
+  const selectorPeriodo = document.getElementById('reporte-periodo');
+  if (selectorPeriodo) selectorPeriodo.value = new Date().toISOString().slice(0, 7);
   const ok = await cargarSesion();
   if (!ok) return;
   initNavegacion();

@@ -1,0 +1,26 @@
+name: SICIS CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci --ignore-scripts
+      - run: node --check index.js
+      - run: node --check db-init.js
+      - run: node --check migrate.js
+      - run: node --check ../frontend/script.js
+      - run: npm audit --omit=dev --audit-level=high

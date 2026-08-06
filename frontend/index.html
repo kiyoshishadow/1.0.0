@@ -262,6 +262,13 @@
       <section class="seccion-panel" id="panel-reportes">
         <div class="main-container">
           <h1 class="titulo-principal">Reportes</h1>
+          <div class="toolbar reportes-acciones">
+            <label for="reporte-periodo">Período</label>
+            <input type="month" id="reporte-periodo" aria-label="Período de reportes"/>
+            <button class="btn-secundario" type="button" onclick="recargarReportes()">Actualizar</button>
+            <button class="btn-secundario" type="button" onclick="exportarReporteExcel()">Exportar Excel</button>
+            <button class="btn-principal" type="button" onclick="imprimirReporte()">Guardar PDF</button>
+          </div>
           <div class="reportes-tabs">
             <button class="btn-secundario tab-btn active" data-tab="consumo" onclick="mostrarTabReporte('consumo')">Consumo mensual</button>
             <button class="btn-secundario tab-btn" data-tab="toner" onclick="mostrarTabReporte('toner')">Rendimiento tóner</button>

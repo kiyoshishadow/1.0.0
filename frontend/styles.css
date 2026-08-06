@@ -1676,6 +1676,15 @@ body.dark-mode .form-card-group textarea::placeholder {
   color: var(--text-primary);
 }
 
+.reportes-acciones input[type="month"] {
+  min-height: 42px;
+  border: 1px solid var(--border-color, #d1d5db);
+  border-radius: 8px;
+  padding: 0 12px;
+  background: var(--surface-color, #fff);
+  color: var(--text-primary);
+}
+
 #tabla-auditoria code {
   display: block;
   max-width: 360px;
@@ -1692,9 +1701,12 @@ body.dark-mode .form-card-group textarea::placeholder {
 }
 
 @media print {
-  .header, .sidebar, .footer, .mensaje-sistema, .auditoria-filtros { display: none !important; }
+  .header, .sidebar, .footer, .mensaje-sistema, .auditoria-filtros, .reportes-acciones, .reportes-tabs { display: none !important; }
   .seccion-panel { display: none !important; }
   #panel-auditoria { display: block !important; }
+  #panel-reportes { display: block !important; }
+  #panel-reportes .tab-reporte { display: none !important; }
+  #panel-reportes .tab-reporte.active { display: block !important; }
   .app-content, .main-container { padding: 0 !important; margin: 0 !important; }
   .tabla-wrapper { overflow: visible !important; border: 0 !important; }
 }

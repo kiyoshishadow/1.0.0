@@ -13,6 +13,14 @@
 2. Ejecute `npm install`, `npm run migrate` y `npm run seed` dentro de `backend`.
 3. Inicie con `npm start`. Para producción use `NODE_ENV=production`, HTTPS y una `SESSION_SECRET` aleatoria.
 
+### Despliegue con Docker
+
+1. Copie `.env.docker.example` como `.env` y reemplace las dos claves de ejemplo por secretos fuertes.
+2. Ejecute `docker compose up -d --build`.
+3. Publique el puerto 3001 mediante un proxy inverso con HTTPS (Nginx, Caddy o el hosting elegido). El dominio, DNS, certificado y destino de copias de seguridad pertenecen a la infraestructura y no se pueden crear desde este repositorio.
+
+El contenedor inicializa y migra la base de datos antes de exponer la aplicación. La configuración de CI también valida sintaxis y dependencias en cada envío a GitHub.
+
 ## Siguientes mejoras priorizadas
 
 1. Reemplazar el almacenamiento de sesiones en memoria por PostgreSQL o Redis antes de usar múltiples instancias.

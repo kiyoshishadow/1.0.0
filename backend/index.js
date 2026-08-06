@@ -40,6 +40,16 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json({ limit: '100kb' }));
+app.use((req, res, next) => {
+  const contieneMarcado = value => {
+    if (typeof value === 'string') return /[<>]/.test(value);
+    if (Array.isArray(value)) return value.some(contieneMarcado);
+    if (value && typeof value === 'object') return Object.values(value).some(contieneMarcado);
+    return false;
+  };
+  if (contieneMarcado(req.body)) return res.status(400).json({ error: 'No se permite HTML en los campos del sistema' });
+  next();
+});
 app.use(session({
   name: 'sicis.sid',
   secret: SESSION_SECRET || 'solo-desarrollo-cambie-esta-clave',
@@ -636,8 +646,15 @@ app.post('/registros', requireAuth, requireRoles('administrador', 'supervisor', 
 
 // --- REPORTES ---
 
+function periodoReporte(periodo) {
+  if (periodo && !/^\d{4}-(0[1-9]|1[0-2])$/.test(periodo)) return null;
+  return `${periodo || new Date().toISOString().slice(0, 7)}-01`;
+}
+
 app.get('/reportes/consumo-mensual', requireAuth, requireRoles('administrador', 'supervisor'), async (req, res) => {
   try {
+    const inicio = periodoReporte(req.query.periodo);
+    if (!inicio) return res.status(400).json({ error: 'Período inválido; use AAAA-MM' });
     const result = await pool.query(`
       SELECT i.nombre AS impresora,
              COALESCE(SUM(r.recarga_papel), 0)::int AS papel_total,
@@ -645,11 +662,11 @@ app.get('/reportes/consumo-mensual', requireAuth, requireRoles('administrador', 
              COALESCE(MAX(r.contador_diario), 0)::int AS contador_maximo
       FROM impresoras i
       LEFT JOIN registros_diarios r ON r.impresora_id = i.id
-        AND EXTRACT(YEAR FROM r.fecha) = EXTRACT(YEAR FROM CURRENT_DATE)
-        AND EXTRACT(MONTH FROM r.fecha) = EXTRACT(MONTH FROM CURRENT_DATE)
+        AND r.fecha >= $1::date
+        AND r.fecha < ($1::date + INTERVAL '1 month')
       GROUP BY i.id, i.nombre
       ORDER BY i.nombre
-    `);
+    `, [inicio]);
     res.json(result.rows);
   } catch (error) {
     console.error('Error reporte consumo:', error);
@@ -659,16 +676,18 @@ app.get('/reportes/consumo-mensual', requireAuth, requireRoles('administrador', 
 
 app.get('/reportes/toner', requireAuth, requireRoles('administrador', 'supervisor'), async (req, res) => {
   try {
+    const inicio = periodoReporte(req.query.periodo);
+    if (!inicio) return res.status(400).json({ error: 'Período inválido; use AAAA-MM' });
     const result = await pool.query(`
       SELECT i.nombre AS impresora,
              COUNT(r.id) FILTER (WHERE r.cambio_toner = true)::int AS cambios_toner
       FROM impresoras i
       LEFT JOIN registros_diarios r ON r.impresora_id = i.id
-        AND EXTRACT(YEAR FROM r.fecha) = EXTRACT(YEAR FROM CURRENT_DATE)
-        AND EXTRACT(MONTH FROM r.fecha) = EXTRACT(MONTH FROM CURRENT_DATE)
+        AND r.fecha >= $1::date
+        AND r.fecha < ($1::date + INTERVAL '1 month')
       GROUP BY i.id, i.nombre
       ORDER BY i.nombre
-    `);
+    `, [inicio]);
     res.json(result.rows);
   } catch (error) {
     console.error('Error reporte toner:', error);

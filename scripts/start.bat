@@ -15,6 +15,15 @@ if errorlevel 1 (
 )
 echo.
 
+echo Inicializando esquema de base de datos...
+call npm run init-db
+if errorlevel 1 (
+  echo ERROR: No se pudo inicializar la base de datos.
+  pause
+  exit /b 1
+)
+echo.
+
 echo Aplicando migraciones de base de datos...
 call npm run migrate
 if errorlevel 1 (

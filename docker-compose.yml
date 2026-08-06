@@ -1,0 +1,37 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-control_impresiones}
+      POSTGRES_USER: ${DB_USER:-sicis}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Defina DB_PASSWORD en .env}
+    volumes:
+      - sicis_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-sicis} -d ${DB_NAME:-control_impresiones}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-control_impresiones}
+      DB_USER: ${DB_USER:-sicis}
+      DB_PASSWORD: ${DB_PASSWORD:?Defina DB_PASSWORD en .env}
+      SESSION_SECRET: ${SESSION_SECRET:?Defina SESSION_SECRET en .env}
+      SESSION_TTL_MS: ${SESSION_TTL_MS:-28800000}
+    ports:
+      - "3001:3001"
+
+volumes:
+  sicis_postgres:
