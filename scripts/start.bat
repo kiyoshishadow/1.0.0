@@ -15,6 +15,15 @@ if errorlevel 1 (
 )
 echo.
 
+echo Aplicando migraciones de base de datos...
+call npm run migrate
+if errorlevel 1 (
+  echo ERROR: No se pudieron aplicar las migraciones de la base de datos.
+  pause
+  exit /b 1
+)
+echo.
+
 echo Deteniendo backend previo en puerto 3001...
 call npm run stop >nul 2>&1
 echo.
