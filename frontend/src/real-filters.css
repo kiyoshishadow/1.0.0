@@ -1,0 +1,25 @@
+.printer-state-filters {
+  display: inline-flex;
+  gap: 5px;
+  padding: 4px;
+  border: 1px solid rgba(139, 191, 217, .44);
+  border-radius: 15px;
+  background: rgba(255, 255, 255, .68);
+  box-shadow: inset 0 1px rgba(255, 255, 255, .9);
+}
+.printer-state-filter {
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: 11px;
+  color: #68899d;
+  background: transparent;
+  font-size: 11px;
+  font-weight: 750;
+  transition: color .25s, background .3s, box-shadow .3s, transform .3s var(--ease);
+}
+.printer-state-filter:hover { color: #117fbe; transform: translateY(-1px); }
+.printer-state-filter.active {
+  color: #fff;
+  background: linear-gradient(135deg, #19aae9, #0964ba);
+  box-shadow: 0 9px 20px rgba(10, 113, 184, .22);
+}

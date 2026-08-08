@@ -1,0 +1,359 @@
+:root {
+  font-family: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --display-font: "Space Grotesk", "Manrope", sans-serif;
+  --button-ease: cubic-bezier(.16, 1, .3, 1);
+}
+body, button, input { font-family: "Manrope", ui-sans-serif, system-ui, sans-serif; }
+.login-title,
+.hero-content h1,
+.station-intro h1,
+.room-header h2,
+.printer-summary h3,
+.detail-heading h2,
+.metric strong,
+.radar span,
+.transition-label b {
+  font-family: var(--display-font);
+}
+.login-title { font-weight: 600; letter-spacing: -3.6px; }
+.hero-content h1, .station-intro h1 { font-weight: 620; }
+.room-header h2 { font-weight: 650; }
+.prototype-label,
+.overline,
+.panel-index,
+.hero-content > p,
+.station-intro p,
+.room-header p {
+  font-family: "Manrope", sans-serif;
+  font-weight: 750;
+  letter-spacing: 1.25px;
+}
+button { -webkit-tap-highlight-color: transparent; }
+
+/* Botones principales: barrido, profundidad y respuesta física */
+.launch-button,
+.primary-action,
+.add-button,
+.printer-open,
+.secondary-action,
+.detail-timeline button {
+  isolation: isolate;
+  overflow: hidden;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+.launch-button:after,
+.primary-action:after,
+.add-button:after,
+.printer-open:after,
+.secondary-action:after,
+.detail-timeline button:after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  width: 28px;
+  height: 28px;
+  right: 9px;
+  top: 50%;
+  border-radius: 50%;
+  background: rgba(255,255,255,.2);
+  transform: translateY(-50%) scale(0);
+  transition: transform .58s var(--button-ease);
+}
+.launch-button:hover:after,
+.add-button:hover:after,
+.detail-timeline button:hover:after {
+  transform: translateY(-50%) scale(10);
+}
+.primary-action:after,
+.secondary-action:after,
+.printer-open:after {
+  background: linear-gradient(135deg, #1ba9ea, #075fb7);
+}
+.primary-action:hover:after,
+.secondary-action:hover:after,
+.printer-open:hover:after {
+  transform: translateY(-50%) scale(12);
+}
+.primary-action:hover,
+.secondary-action:hover,
+.printer-open:hover {
+  color: #fff;
+}
+.launch-button i,
+.primary-action b,
+.secondary-action b,
+.printer-open b {
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  transition: transform .42s var(--button-ease), background .32s;
+}
+.launch-button:hover i,
+.primary-action:hover b,
+.secondary-action:hover b,
+.printer-open:hover b {
+  transform: translate3d(3px,-3px,18px) rotate(45deg);
+}
+.launch-button:active,
+.primary-action:active,
+.add-button:active,
+.printer-open:active,
+.secondary-action:active {
+  transform: translateY(1px) scale(.975) !important;
+}
+.primary-action,
+.secondary-action,
+.add-button {
+  position: relative;
+  min-height: 38px;
+  letter-spacing: .1px;
+}
+.printer-open {
+  position: relative;
+  letter-spacing: .05px;
+}
+.add-button:before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  z-index: -2;
+  border-radius: inherit;
+  opacity: 0;
+  background: conic-gradient(from var(--button-angle, 0deg), transparent 30%, #99e7ff 46%, transparent 61%);
+  transition: opacity .25s;
+  animation: button-orbit 2.6s linear infinite;
+}
+.add-button:hover:before { opacity: 1; }
+
+/* Navegación orbital */
+.station-button {
+  width: 51px;
+  height: 51px;
+  transition: transform .42s var(--button-ease), color .3s;
+}
+.station-button:after {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border: 1px solid rgba(37,156,216,.22);
+  border-radius: 18px;
+  opacity: 0;
+  transform: rotate(18deg) scale(.72);
+  transition: opacity .35s, transform .55s var(--button-ease);
+}
+.station-button:hover:after {
+  opacity: 1;
+  transform: rotate(0deg) scale(1);
+}
+.station-button:hover {
+  transform: translateZ(20px) rotateY(-8deg);
+}
+.station-button.active:after {
+  opacity: .72;
+  border-color: rgba(37,172,232,.37);
+  animation: nav-orbit 3.4s linear infinite;
+}
+.station-button.active .active-marker {
+  box-shadow: 0 15px 30px rgba(15,126,199,.31), inset 0 1px rgba(255,255,255,.38), 0 0 0 7px rgba(37,169,229,.07);
+}
+.station-button.active i {
+  animation: icon-land .62s var(--button-ease);
+}
+.station-button b {
+  font-family: "Manrope", sans-serif;
+  font-weight: 700;
+  letter-spacing: .1px;
+}
+
+/* Botones superiores */
+.command-button {
+  position: relative;
+  overflow: hidden;
+  transition: width .42s var(--button-ease), border-color .3s, box-shadow .3s, transform .3s;
+}
+.command-button:after {
+  content: "";
+  position: absolute;
+  width: 60px;
+  height: 100%;
+  left: -75px;
+  top: 0;
+  background: linear-gradient(90deg, transparent, rgba(33,168,230,.11), transparent);
+  transform: skewX(-18deg);
+  transition: left .72s var(--button-ease);
+}
+.command-button:hover {
+  border-color: rgba(38,163,223,.45);
+  box-shadow: 0 12px 25px rgba(28,107,151,.09);
+  transform: translateY(-2px);
+}
+.command-button:hover:after { left: 110%; }
+.command-button:hover i { animation: search-pulse .6s var(--button-ease); }
+
+.live-button {
+  transition: transform .3s var(--button-ease), background .3s, box-shadow .3s;
+}
+.live-button:hover {
+  transform: translateY(-2px);
+  background: rgba(238,253,243,.92);
+  box-shadow: 0 10px 22px rgba(68,167,101,.11);
+}
+.live-button i { animation: live-pulse 2.1s infinite; }
+
+.profile {
+  position: relative;
+  overflow: hidden;
+  transition: transform .3s var(--button-ease), border-color .3s, box-shadow .3s;
+}
+.profile:after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  opacity: 0;
+  background: linear-gradient(110deg, transparent, rgba(30,162,226,.1), transparent);
+  transform: translateX(-100%);
+  transition: transform .62s var(--button-ease), opacity .2s;
+}
+.profile:hover { transform: translateY(-2px); border-color: rgba(37,163,222,.4); box-shadow: 0 10px 22px rgba(28,107,151,.09); }
+.profile:hover:after { opacity: 1; transform: translateX(100%); }
+
+/* Botón de cerrar sesión: puerta + flecha */
+.logout-button {
+  position: relative;
+  width: 37px;
+  height: 37px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #dcebf3;
+  border-radius: 13px;
+  color: #7795a8;
+  background: rgba(255,255,255,.82);
+  box-shadow: 0 8px 18px rgba(35,101,139,.06);
+  transition: width .45s var(--button-ease), border-radius .45s var(--button-ease), color .3s, background .3s, transform .3s;
+}
+.logout-button:hover {
+  color: #fff;
+  background: linear-gradient(145deg, #ff706e, #e74658);
+  border-color: transparent;
+  transform: translateY(-3px);
+  box-shadow: 0 13px 25px rgba(216,67,83,.23);
+}
+.logout-glyph {
+  position: relative;
+  width: 17px;
+  height: 17px;
+  display: block;
+}
+.logout-door {
+  position: absolute;
+  right: 1px;
+  top: 1px;
+  width: 10px;
+  height: 15px;
+  border: 1.8px solid currentColor;
+  border-left-width: 1px;
+  border-radius: 2px;
+  transform-origin: right center;
+  transition: transform .5s var(--button-ease);
+}
+.logout-arrow {
+  position: absolute;
+  left: 0;
+  top: 3px;
+  font-size: 11px;
+  font-weight: 900;
+  transition: transform .5s var(--button-ease);
+}
+.logout-button:hover .logout-door { transform: perspective(70px) rotateY(-43deg); }
+.logout-button:hover .logout-arrow { transform: translateX(-4px); }
+.logout-button > b {
+  position: absolute;
+  left: 51px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  opacity: 0;
+  pointer-events: none;
+  color: #fff;
+  background: #d94858;
+  box-shadow: 0 8px 20px rgba(182,52,67,.2);
+  font-size: 9px;
+  white-space: nowrap;
+  transform: translateX(-7px);
+  transition: .28s var(--button-ease);
+}
+.logout-button:hover > b { opacity: 1; transform: translateX(0); }
+.logout-top-button {
+  display: none;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border: 1px solid rgba(230,101,111,.25);
+  border-radius: 50%;
+  color: #dc5a67;
+  background: rgba(255,255,255,.75);
+}
+
+/* Ripple generado por JS */
+.button-ripple {
+  position: absolute;
+  z-index: 5;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  pointer-events: none;
+  background: rgba(255,255,255,.58);
+  transform: translate(-50%,-50%) scale(0);
+  animation: button-ripple .72s ease-out forwards;
+}
+
+/* La sesión se cierra como una secuencia, no con un corte */
+.logout-curtain {
+  position: fixed;
+  z-index: 75;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at center, rgba(38,175,235,.14), rgba(4,16,26,.97) 52%);
+}
+.logout-curtain:before,
+.logout-curtain:after {
+  content: "";
+  position: absolute;
+  border: 1px solid rgba(104,213,255,.25);
+  border-radius: 50%;
+}
+.logout-curtain:before { width: 260px; height: 260px; }
+.logout-curtain:after { width: 150px; height: 150px; border-style: dashed; }
+.logout-curtain span {
+  color: #cdefff;
+  font-family: var(--display-font);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 2px;
+}
+
+@keyframes button-orbit { to { --button-angle: 360deg; } }
+@keyframes nav-orbit { to { transform: rotate(360deg) scale(1); } }
+@keyframes icon-land { 0% { transform: translateZ(0) scale(.6) rotate(-35deg); } 60% { transform: translateZ(28px) scale(1.22) rotate(5deg); } 100% { transform: translateZ(0) scale(1) rotate(0); } }
+@keyframes search-pulse { 50% { transform: scale(1.25) rotate(-12deg); color: #149ee6; } }
+@keyframes live-pulse { 60% { box-shadow: 0 0 0 7px rgba(102,209,132,0); } }
+@keyframes button-ripple { to { opacity: 0; transform: translate(-50%,-50%) scale(16); } }
+
+@property --button-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@media (max-width: 760px) {
+  .logout-top-button { display: grid; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .station-button.active:after,
+  .live-button i,
+  .add-button:before { animation: none !important; }
+}

@@ -1,42 +1,31 @@
-# Scripts de SICIS - SISTEMA INFORMÁTICO DE CONTROL DE IMPRESIONES Y SUMINISTROS
+# Scripts de SICIS
 
-## Scripts disponibles
+## `start.bat`
 
-### start.bat
-Inicia el sistema SICIS. Detiene cualquier instancia previa del backend y abre el navegador en la página de login.
+Prepara y levanta la aplicación completa:
 
-### reset-database.bat
-Elimina todos los datos de la base de datos manteniendo solo los usuarios de login (admin, carlos, maria, juan, laura). Útil para limpiar la base de datos sin perder acceso al sistema.
+1. Instala las dependencias del frontend.
+2. Genera la compilación Vite de producción.
+3. Instala las dependencias del backend.
+4. Inicializa el esquema y aplica las migraciones.
+5. Inicia el servidor y abre `http://localhost:3001/`.
 
-### seed-database.bat
-Carga datos de prueba en la base de datos. Ejecuta las migraciones necesarias y luego carga los datos de prueba (impresoras, suministros, alertas, etc.).
+## `reset-database.bat`
 
-## Comandos npm (desde backend/)
+Elimina los datos operativos y conserva los usuarios de acceso. Úselo sólo cuando realmente quiera reiniciar la información local.
 
-- `npm start` - Inicia el servidor backend
-- `npm run init-db` - Inicializa la base de datos (crea tablas)
-- `npm run migrate` - Ejecuta migraciones de columnas
-- `npm run seed` - Carga datos de prueba
-- `npm run reset` - Limpia la base de datos (mantiene usuarios de login)
-- `npm run stop` - Detiene el servidor backend
-- `npm run restart` - Reinicia el servidor backend
+## `seed-database.bat`
 
-## Flujo de trabajo recomendado
+Aplica las migraciones y carga datos de desarrollo para recorrer los módulos de la aplicación.
 
-### Primer inicio
-1. Ejecutar `npm run init-db` desde backend/ para crear las tablas
-2. Ejecutar `scripts\seed-database.bat` para cargar datos de prueba
-3. Ejecutar `scripts\start.bat` para iniciar el sistema
+## Comandos del backend
 
-### Para limpiar y recargar datos
-1. Ejecutar `scripts\reset-database.bat` para limpiar datos
-2. Ejecutar `scripts\seed-database.bat` para recargar datos de prueba
-3. Ejecutar `scripts\start.bat` para iniciar el sistema
+- `npm start`: inicia la API y sirve el frontend compilado.
+- `npm run init-db`: crea el esquema inicial.
+- `npm run migrate`: aplica las migraciones disponibles.
+- `npm run seed`: carga datos de desarrollo.
+- `npm run reset`: limpia los datos operativos.
+- `npm run stop`: detiene la instancia local.
+- `npm run restart`: reinicia el servidor.
 
-## Usuarios de prueba
-
-- admin / admin123 (administrador)
-- carlos / carlos123 (supervisor)
-- maria / maria123 (operario)
-- juan / juan123 (tecnico)
-- laura / laura123 (operario)
+Las credenciales de desarrollo se crean mediante los scripts de base de datos. No deben reutilizarse en producción.

@@ -4,6 +4,22 @@ echo INICIAR SISTEMA SICIS
 echo =====================================
 echo.
 
+cd /d "%~dp0..\frontend"
+echo Preparando frontend cinematografico...
+call npm install --no-audit --no-fund
+if errorlevel 1 (
+  echo ERROR: No se pudieron instalar las dependencias del frontend.
+  pause
+  exit /b 1
+)
+call npm run build
+if errorlevel 1 (
+  echo ERROR: No se pudo compilar el frontend.
+  pause
+  exit /b 1
+)
+echo.
+
 cd /d "%~dp0..\backend"
 
 echo Verificando dependencias...
@@ -42,7 +58,7 @@ start cmd /k "cd /d %~dp0..\backend && npm start"
 timeout /t 3 /nobreak >nul
 
 echo Abriendo navegador...
-start "" "http://localhost:3001/login.html"
+start "" "http://localhost:3001/"
 
 echo.
 echo =====================================

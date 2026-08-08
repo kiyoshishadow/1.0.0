@@ -1,0 +1,90 @@
+import "@fontsource/manrope/400.css";
+import "@fontsource/manrope/500.css";
+import "@fontsource/manrope/600.css";
+import "@fontsource/manrope/700.css";
+import "@fontsource/manrope/800.css";
+import "@fontsource/space-grotesk/500.css";
+import "@fontsource/space-grotesk/600.css";
+import "@fontsource/space-grotesk/700.css";
+import "./polish.css";
+import "./button-refinement.css";
+import { gsap } from "gsap";
+
+const navFooter = document.querySelector(".nav-footer");
+const motionButton = document.querySelector("#motion-toggle");
+const navIcons = {
+  overview: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12 12 5l8 7v7a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1v-7Z"/></svg>',
+  printers: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9V4h10v5M7 17H5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M7 14h10v6H7v-6Z"/><path d="M17.5 12h.01"/></svg>',
+  requests: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"/><path d="M8 9h8M8 13h5M8 17h7"/></svg>',
+  reports: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20V10M12 20V4M19 20v-7"/><path d="M3 20h18"/></svg>',
+};
+
+document.querySelectorAll(".station-button").forEach((button) => {
+  const icon = button.querySelector(":scope > i:not(.active-marker)");
+  if (!icon || !navIcons[button.dataset.stationTarget]) return;
+  icon.innerHTML = navIcons[button.dataset.stationTarget];
+  const svg = icon.querySelector("svg");
+  svg.setAttribute("fill", "none");
+  svg.setAttribute("stroke", "currentColor");
+  svg.setAttribute("stroke-width", "1.8");
+  svg.setAttribute("stroke-linecap", "round");
+  svg.setAttribute("stroke-linejoin", "round");
+});
+
+function buildLogoutButton(extraClass = "") {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "logout-button " + extraClass;
+  button.setAttribute("aria-label", "Cerrar sesión y volver al inicio");
+  button.innerHTML = '<span class="logout-glyph"><i class="logout-door"></i><i class="logout-arrow">←</i></span><b>Cerrar sesión</b>';
+  button.addEventListener("click", () => {
+    if (typeof window.sicisCinematicLogout === "function") window.sicisCinematicLogout();
+  });
+  return button;
+}
+
+const sidebarLogout = buildLogoutButton();
+navFooter.insertBefore(sidebarLogout, motionButton);
+
+const topLogout = buildLogoutButton("logout-top-button");
+topLogout.querySelector("b").remove();
+document.querySelector(".room-actions").appendChild(topLogout);
+
+const curtain = document.createElement("div");
+curtain.className = "logout-curtain";
+curtain.id = "logout-curtain";
+curtain.innerHTML = "<span>CERRANDO SESIÓN</span>";
+document.querySelector(".experience").appendChild(curtain);
+
+const magneticTargets = document.querySelectorAll(
+  ".launch-button, .primary-action, .add-button, .printer-open, .secondary-action, .detail-timeline button"
+);
+
+magneticTargets.forEach((button) => {
+  const moveX = gsap.quickTo(button, "x", { duration: 0.42, ease: "power3.out" });
+  const moveY = gsap.quickTo(button, "y", { duration: 0.42, ease: "power3.out" });
+  button.addEventListener("pointermove", (event) => {
+    if (document.documentElement.classList.contains("motion-reduced")) return;
+    const rect = button.getBoundingClientRect();
+    moveX((event.clientX - rect.left - rect.width / 2) * 0.045);
+    moveY((event.clientY - rect.top - rect.height / 2) * 0.055);
+  });
+  button.addEventListener("pointerleave", () => {
+    moveX(0);
+    moveY(0);
+  });
+});
+
+document.querySelectorAll(
+  ".launch-button, .primary-action, .add-button, .printer-open, .secondary-action, .station-button, .command-button, .profile, .logout-button"
+).forEach((button) => {
+  button.addEventListener("pointerdown", (event) => {
+    const rect = button.getBoundingClientRect();
+    const ripple = document.createElement("i");
+    ripple.className = "button-ripple";
+    ripple.style.left = event.clientX - rect.left + "px";
+    ripple.style.top = event.clientY - rect.top + "px";
+    button.appendChild(ripple);
+    window.setTimeout(() => ripple.remove(), 760);
+  });
+});

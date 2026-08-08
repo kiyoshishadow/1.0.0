@@ -1,0 +1,21 @@
+{
+  "name": "sicis-frontend",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 4174",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 4174"
+  },
+  "dependencies": {
+    "@fontsource/manrope": "^5.2.8",
+    "@fontsource/space-grotesk": "^5.2.8",
+    "chart.js": "^4.5.1",
+    "gsap": "^3.13.0",
+    "three": "^0.183.0"
+  },
+  "devDependencies": {
+    "vite": "^7.1.0"
+  }
+}

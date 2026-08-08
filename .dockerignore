@@ -1,4 +1,8 @@
 .git
-backend/node_modules
+**/node_modules
+**/dist
 backend/.env
+.env
 *.log
+cinematic-prototype*
+frontend-cinematic
