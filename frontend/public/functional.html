@@ -14,6 +14,7 @@
               <div class="stat-content">
                 <span class="stat-label">Impresoras activas</span>
                 <span class="stat-value" id="stat-impresoras">0</span>
+                <span class="stat-context">Disponibles ahora</span>
               </div>
             </div>
             <div class="stat-card stat-warning clickable" onclick="navegarDesdeResumen('suministros', 'bajos')">
@@ -26,6 +27,7 @@
               <div class="stat-content">
                 <span class="stat-label">Suministros bajos</span>
                 <span class="stat-value" id="stat-suministros">0</span>
+                <span class="stat-context">Requieren reposición</span>
               </div>
             </div>
             <div class="stat-card stat-info clickable" onclick="navegarDesdeResumen('mantenimientos', 'pendientes')">
@@ -38,6 +40,7 @@
               <div class="stat-content">
                 <span class="stat-label">Mantenimientos pendientes</span>
                 <span class="stat-value" id="stat-mantenimientos">0</span>
+                <span class="stat-context">Órdenes por atender</span>
               </div>
             </div>
             <div class="stat-card stat-primary clickable" onclick="navegarDesdeResumen('reportes', 'consumo')">
@@ -49,6 +52,7 @@
               <div class="stat-content">
                 <span class="stat-label">Consumo mensual</span>
                 <span class="stat-value" id="stat-consumo">0</span>
+                <span class="stat-context">Hojas registradas</span>
               </div>
             </div>
             <div class="stat-card stat-secondary clickable" onclick="navegarDesdeResumen('impresoras', 'inactivas')">
@@ -62,6 +66,7 @@
               <div class="stat-content">
                 <span class="stat-label">Impresoras inactivas</span>
                 <span class="stat-value" id="stat-impresoras-inactivas">0</span>
+                <span class="stat-context">Fuera de línea</span>
               </div>
             </div>
             <div class="stat-card stat-accent clickable" onclick="navegarDesdeResumen('impresoras', 'mantenimiento')">
@@ -73,6 +78,7 @@
               <div class="stat-content">
                 <span class="stat-label">En mantenimiento</span>
                 <span class="stat-value" id="stat-impresoras-mantenimiento">0</span>
+                <span class="stat-context">Intervenciones activas</span>
               </div>
             </div>
           </div>
@@ -107,17 +113,17 @@
       <section class="seccion-panel" id="panel-impresoras">
         <div class="main-container">
           <h1 class="titulo-principal">Impresoras</h1>
-          <div class="toolbar">
-            <input type="search" id="buscar-impresoras" class="buscador" placeholder="Buscar por nombre, modelo o ubicación..." oninput="filtrarImpresoras(this.value)"/>
+          <div class="toolbar fleet-toolbar">
+            <div class="printer-filters-host"></div>
+            <label class="fleet-search" for="buscar-impresoras">
+              <span>Buscar equipo</span>
+              <input type="search" id="buscar-impresoras" class="buscador" placeholder="Nombre, modelo o ubicación..." oninput="filtrarImpresoras(this.value)"/>
+            </label>
             <button class="btn-principal" id="btn-nueva-impresora" onclick="abrirModalImpresora()">Nueva impresora</button>
           </div>
-          <div class="tabla-wrapper">
-            <table>
-              <thead>
-                <tr><th>Nombre</th><th>Modelo</th><th>Ubicación</th><th>Estado</th><th>Contador</th><th>Acciones</th></tr>
-              </thead>
-              <tbody id="tabla-impresoras"></tbody>
-            </table>
+          <div class="fleet-summary" id="fleet-summary" aria-live="polite"></div>
+          <div class="printer-fleet-grid" id="grid-impresoras">
+            <div class="fleet-empty">Cargando equipos conectados…</div>
           </div>
           <div class="paginacion" id="paginacion-impresoras">
             <button class="btn-secundario" id="btn-imp-anterior" onclick="paginarImpresoras(impresorasPagina - 1)">Anterior</button>
@@ -229,16 +235,31 @@
       <!-- CONFIGURACIÓN -->
       <section class="seccion-panel" id="panel-configuracion">
         <div class="main-container">
-          <h1 class="titulo-principal">Configuración</h1>
-          <p class="descripcion">Gestión de usuarios y roles del sistema</p>
-          <div class="toolbar">
-            <button class="btn-principal" id="btn-nuevo-usuario" onclick="abrirModalUsuario()">Añadir usuario</button>
-          </div>
-          <div class="tabla-wrapper">
-            <table>
-              <thead><tr><th>Nombre</th><th>Usuario</th><th>Rol</th><th>Estado</th><th>Acciones</th></tr></thead>
-              <tbody id="tabla-usuarios"></tbody>
-            </table>
+          <div class="profiles-layout">
+            <section class="profiles-panel">
+              <header class="profiles-heading">
+                <div><span>DIRECTORIO</span><h2>Perfiles registrados</h2></div>
+                <p>Administra las cuentas activas del sistema.</p>
+              </header>
+              <div class="tabla-wrapper profiles-table">
+                <table>
+                  <thead><tr><th>Nombre</th><th>Usuario</th><th>Rol</th><th>Estado</th><th>Acciones</th></tr></thead>
+                  <tbody id="tabla-usuarios"></tbody>
+                </table>
+              </div>
+            </section>
+            <section class="roles-panel" aria-labelledby="roles-title">
+              <header class="profiles-heading">
+                <div><span>PERMISOS</span><h2 id="roles-title">Alcance por rol</h2></div>
+                <p>Resumen de acceso a las áreas operativas.</p>
+              </header>
+              <div class="role-list">
+                <article><i class="role-dot admin"></i><div><strong>Administrador</strong><span>Control total, perfiles y auditoría</span></div><b>08</b></article>
+                <article><i class="role-dot supervisor"></i><div><strong>Supervisor</strong><span>Operación, reportes y seguimiento</span></div><b>06</b></article>
+                <article><i class="role-dot operator"></i><div><strong>Operario</strong><span>Flota, suministros y registros</span></div><b>04</b></article>
+                <article><i class="role-dot technician"></i><div><strong>Técnico</strong><span>Flota y mantenimientos</span></div><b>03</b></article>
+              </div>
+            </section>
           </div>
         </div>
       </section>

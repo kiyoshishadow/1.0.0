@@ -13,10 +13,14 @@ import { gsap } from "gsap";
 const navFooter = document.querySelector(".nav-footer");
 const motionButton = document.querySelector("#motion-toggle");
 const navIcons = {
-  overview: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12 12 5l8 7v7a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1v-7Z"/></svg>',
-  printers: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9V4h10v5M7 17H5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M7 14h10v6H7v-6Z"/><path d="M17.5 12h.01"/></svg>',
-  requests: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"/><path d="M8 9h8M8 13h5M8 17h7"/></svg>',
-  reports: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20V10M12 20V4M19 20v-7"/><path d="M3 20h18"/></svg>',
+  dashboard: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12 12 5l8 7v7a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1v-7Z"/></svg>',
+  impresoras: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9V4h10v5M7 17H5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M7 14h10v6H7v-6Z"/><path d="M17.5 12h.01"/></svg>',
+  suministros: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m20 13.5-6.6 6.6a2 2 0 0 1-2.8 0L2 11.5V3h8.5l9.5 9.5a.7.7 0 0 1 0 1Z"/><circle cx="7" cy="8" r="1"/></svg>',
+  mantenimientos: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5 5L3.4 17.6a2 2 0 1 0 3 3l6.3-6.3a4 4 0 0 0 5-5l-2.4 2.4-3-3 2.4-2.1Z"/></svg>',
+  registros: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/></svg>',
+  reportes: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20V10M12 20V4M19 20v-7"/><path d="M3 20h18"/></svg>',
+  configuracion: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3"/><path d="M5 21a7 7 0 0 1 14 0M19 4v5M16.5 6.5h5"/></svg>',
+  auditoria: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v9l4 2"/><circle cx="12" cy="12" r="8"/><path d="M6 4 4 2M18 4l2-2"/></svg>',
 };
 
 document.querySelectorAll(".station-button").forEach((button) => {

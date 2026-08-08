@@ -249,18 +249,21 @@ app.post('/logout', (req, res) => {
 // --- DASHBOARD ---
 
 app.get('/dashboard/resumen', requireAuth, requireRoles('administrador', 'supervisor', 'operario', 'tecnico'), async (req, res) => {
+  let client;
   try {
-    const [impresorasActivas, suministrosBajos, mantenimientosPendientes, consumoMensual, alertas, consumoPorImpresora, impresorasInactivas, impresorasMantenimiento] = await Promise.all([
-      pool.query("SELECT COUNT(*)::int AS total FROM impresoras WHERE estado = 'activa'"),
-      pool.query('SELECT COUNT(*)::int AS total FROM suministros WHERE cantidad <= stock_minimo'),
-      pool.query("SELECT COUNT(*)::int AS total FROM mantenimientos WHERE estado IN ('pendiente', 'en proceso')"),
-      pool.query(`
+    client = await pool.connect();
+    // Keep the summary on one connection. This avoids exhausting small local
+    // PostgreSQL pools when the dashboard and fleet load at the same time.
+    const impresorasActivas = await client.query("SELECT COUNT(*)::int AS total FROM impresoras WHERE estado = 'activa'");
+    const suministrosBajos = await client.query('SELECT COUNT(*)::int AS total FROM suministros WHERE cantidad <= stock_minimo');
+    const mantenimientosPendientes = await client.query("SELECT COUNT(*)::int AS total FROM mantenimientos WHERE estado IN ('pendiente', 'en proceso')");
+    const consumoMensual = await client.query(`
         SELECT COALESCE(SUM(contador_diario), 0)::int AS total
         FROM registros_diarios
         WHERE EXTRACT(YEAR FROM fecha) = EXTRACT(YEAR FROM CURRENT_DATE)
           AND EXTRACT(MONTH FROM fecha) = EXTRACT(MONTH FROM CURRENT_DATE)
-      `),
-      pool.query(`
+      `);
+    const alertas = await client.query(`
         SELECT id, tipo, gravedad, titulo, descripcion, referencia_id, fecha_creacion
         FROM alertas
         WHERE activa = true
@@ -273,8 +276,8 @@ app.get('/dashboard/resumen', requireAuth, requireRoles('administrador', 'superv
           END,
           fecha_creacion DESC
         LIMIT 20
-      `),
-      pool.query(`
+      `);
+    const consumoPorImpresora = await client.query(`
         SELECT i.nombre AS impresora,
                COALESCE(SUM(r.recarga_papel), 0)::int AS papel,
                COALESCE(SUM(r.contador_diario), 0)::int AS contador
@@ -284,10 +287,9 @@ app.get('/dashboard/resumen', requireAuth, requireRoles('administrador', 'superv
           AND EXTRACT(MONTH FROM r.fecha) = EXTRACT(MONTH FROM CURRENT_DATE)
         GROUP BY i.id, i.nombre
         ORDER BY i.nombre
-      `),
-      pool.query("SELECT COUNT(*)::int AS total FROM impresoras WHERE estado = 'inactiva'"),
-      pool.query("SELECT COUNT(*)::int AS total FROM impresoras WHERE estado = 'mantenimiento'")
-    ]);
+      `);
+    const impresorasInactivas = await client.query("SELECT COUNT(*)::int AS total FROM impresoras WHERE estado = 'inactiva'");
+    const impresorasMantenimiento = await client.query("SELECT COUNT(*)::int AS total FROM impresoras WHERE estado = 'mantenimiento'");
 
     res.json({
       impresoras_activas: impresorasActivas.rows[0].total,
@@ -302,6 +304,8 @@ app.get('/dashboard/resumen', requireAuth, requireRoles('administrador', 'superv
   } catch (error) {
     console.error('Error dashboard:', error);
     res.status(500).json({ error: 'Error interno' });
+  } finally {
+    client?.release();
   }
 });
 

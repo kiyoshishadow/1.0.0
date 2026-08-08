@@ -8,7 +8,7 @@ let impresorasData = [];
 let impresorasFiltradas = [];
 let impresorasPagina = 1;
 let filtroEstadoImpresoras = 'todas';
-const IMPRESORAS_POR_PAGINA = 10;
+const IMPRESORAS_POR_PAGINA = 12;
 
 let suministrosData = [];
 let suministrosFiltrados = [];
@@ -51,16 +51,14 @@ function puedeAcceder(modulo) {
 }
 
 async function fetchAPI(url, options = {}) {
-  console.log(`API Request: ${options.method || 'GET'} ${API_URL}${url}`, options);
-  
+  const { silentUnauthorized = false, ...requestOptions } = options;
   const res = await fetch(`${API_URL}${url}`, {
     credentials: 'include',
-    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
-    ...options
+    headers: { 'Content-Type': 'application/json', ...(requestOptions.headers || {}) },
+    ...requestOptions
   });
-  
-  console.log(`API Response: ${res.status} ${res.statusText} for ${API_URL}${url}`);
-  
+
+  if (res.status === 401 && silentUnauthorized) return null;
   if (!res.ok) {
     const errData = res.headers.get('content-type')?.includes('json') ? await res.json().catch(() => ({})) : {};
     console.error('API Error:', errData);
@@ -85,7 +83,11 @@ function abrirModal(id) {
   const overlay = document.getElementById(id);
   if (overlay) {
     overlay.classList.add('modal-open');
-    overlay.querySelector('.modal')?.classList.add('modal-open');
+    const dialog = overlay.querySelector('.modal');
+    dialog?.classList.add('modal-open');
+    dialog?.setAttribute('aria-modal', 'true');
+    overlay._previousFocus = document.activeElement;
+    requestAnimationFrame(() => dialog?.querySelector('input, select, textarea, button')?.focus({ preventScroll: true }));
   }
 }
 
@@ -94,8 +96,19 @@ function cerrarModal(id) {
   if (overlay) {
     overlay.classList.remove('modal-open');
     overlay.querySelector('.modal')?.classList.remove('modal-open');
+    overlay._previousFocus?.focus?.({ preventScroll: true });
   }
 }
+
+document.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape') return;
+  const abierto = document.querySelector('.modal-overlay.modal-open');
+  if (abierto) cerrarModal(abierto.id);
+});
+
+document.addEventListener('click', (event) => {
+  if (event.target.classList?.contains('modal-overlay')) cerrarModal(event.target.id);
+});
 
 function badgeEstadoStock(cantidad, minimo) {
   if (cantidad <= minimo) {
@@ -133,7 +146,8 @@ function hoyISO() {
 
 async function cargarSesion() {
   try {
-    const sesion = await fetchAPI('/sesion');
+    const sesion = await fetchAPI('/sesion', { silentUnauthorized: true });
+    if (!sesion) return false;
     usuarioRol = normalizarRol(sesion.rol);
     usuarioId = sesion.usuario_id;
     usuarioNombre = sesion.nombre;
@@ -148,6 +162,19 @@ async function cargarSesion() {
     return false;
   }
 }
+
+window.sicisResetSession = () => {
+  usuarioRol = null;
+  usuarioId = null;
+  usuarioNombre = null;
+  const loginButton = document.querySelector('.launch-button');
+  if (loginButton) loginButton.disabled = false;
+  const loginFeedback = document.getElementById('login-feedback');
+  if (loginFeedback) loginFeedback.textContent = 'Usa tus credenciales de SICIS';
+  document.querySelectorAll('.station-button[data-seccion]').forEach(button => {
+    button.hidden = false;
+  });
+};
 
 function configurarMenuPorRol() {
   document.querySelectorAll('.station-button[data-seccion]').forEach(button => {
@@ -535,8 +562,8 @@ function renderChartConsumo(datos) {
 
 function crearFiltrosImpresoras() {
   const panel = document.getElementById('panel-impresoras');
-  const actions = panel?.querySelector('.acciones-superiores');
-  if (!actions || actions.querySelector('.printer-state-filters')) return;
+  const host = panel?.querySelector('.printer-filters-host');
+  if (!host || host.querySelector('.printer-state-filters')) return;
   const filters = document.createElement('div');
   filters.className = 'printer-state-filters';
   filters.setAttribute('role', 'group');
@@ -544,9 +571,10 @@ function crearFiltrosImpresoras() {
   filters.innerHTML = [
     ['todas', 'Todas'],
     ['operativas', 'Operativas'],
-    ['pendientes', 'Pendientes'],
+    ['mantenimiento', 'Mantenimiento'],
+    ['inactivas', 'Fuera de línea'],
   ].map(([value, label], index) => `<button type="button" class="printer-state-filter${index === 0 ? ' active' : ''}" data-filter="${value}">${label}</button>`).join('');
-  actions.prepend(filters);
+  host.appendChild(filters);
   filters.addEventListener('click', (event) => {
     const button = event.target.closest('[data-filter]');
     if (!button) return;
@@ -575,6 +603,8 @@ function filtrarImpresoras(texto) {
       i.ubicacion?.toLowerCase().includes(t);
     const coincideEstado = filtroEstadoImpresoras === 'todas' ||
       (filtroEstadoImpresoras === 'operativas' && i.estado === 'activa') ||
+      (filtroEstadoImpresoras === 'mantenimiento' && i.estado === 'mantenimiento') ||
+      (filtroEstadoImpresoras === 'inactivas' && i.estado === 'inactiva') ||
       (filtroEstadoImpresoras === 'pendientes' && i.estado !== 'activa');
     return coincideTexto && coincideEstado;
   });
@@ -586,32 +616,62 @@ function paginarImpresoras(pagina) {
   impresorasPagina = Math.min(Math.max(1, pagina), totalPaginas);
   const inicio = (impresorasPagina - 1) * IMPRESORAS_POR_PAGINA;
   const slice = impresorasFiltradas.slice(inicio, inicio + IMPRESORAS_POR_PAGINA);
-  renderTablaImpresoras(slice);
+  renderGridImpresoras(slice);
   document.getElementById('info-pagina-impresoras').textContent =
     `Página ${impresorasPagina} de ${totalPaginas} (${impresorasFiltradas.length} registros)`;
   document.getElementById('btn-imp-anterior').disabled = impresorasPagina <= 1;
   document.getElementById('btn-imp-siguiente').disabled = impresorasPagina >= totalPaginas;
 }
 
-function renderTablaImpresoras(lista) {
-  const tbody = document.getElementById('tabla-impresoras');
+function renderGridImpresoras(lista) {
+  const grid = document.getElementById('grid-impresoras');
+  const summary = document.getElementById('fleet-summary');
   const soloLectura = !tieneRol('administrador', 'supervisor');
   const puedeEliminar = tieneRol('administrador');
+  const operativas = impresorasFiltradas.filter(i => i.estado === 'activa').length;
+  const pendientes = impresorasFiltradas.length - operativas;
+  if (summary) summary.innerHTML = `
+    <span><b>${impresorasFiltradas.length}</b> equipos encontrados</span>
+    <span class="summary-online"><i></i>${operativas} operativos</span>
+    <span class="summary-pending"><i></i>${pendientes} pendientes</span>`;
 
-  tbody.innerHTML = lista.map(i => `
-    <tr>
-      <td>${i.nombre}</td>
-      <td>${i.modelo || '-'}</td>
-      <td>${i.ubicacion}</td>
-      <td>${i.estado}</td>
-      <td>${i.contador_actual}</td>
-      <td class="acciones">
-        <button class="btn-secundario btn-sm" onclick="verDetalleImpresora(${i.id})">Ver</button>
-        ${!soloLectura ? `<button class="btn-principal btn-sm" onclick="abrirModalImpresora(${i.id})">Editar</button>` : ''}
-        ${puedeEliminar ? `<button class="btn-danger btn-sm" onclick="eliminarImpresora(${i.id})">Eliminar</button>` : ''}
-      </td>
-    </tr>
-  `).join('') || '<tr><td colspan="6" style="text-align:center">Sin registros</td></tr>';
+  const estadoMeta = {
+    activa: { label: 'Operativa', className: 'online' },
+    mantenimiento: { label: 'Mantenimiento', className: 'maintenance' },
+    inactiva: { label: 'Fuera de línea', className: 'offline' },
+  };
+
+  grid.innerHTML = lista.map((i, index) => {
+    const estado = estadoMeta[i.estado] || estadoMeta.inactiva;
+    const contador = Number(i.contador_actual || 0).toLocaleString('es-SV');
+    const nivel = 38 + ((Number(i.id || index) * 17) % 55);
+    return `
+      <article class="printer-unit-card status-${estado.className}" data-motion-index="${index % 6}">
+        <header>
+          <span class="printer-status"><i></i>${estado.label}</span>
+          <span class="printer-node">SICIS / ${String(i.id).padStart(2, '0')}</span>
+        </header>
+        <div class="printer-card-body">
+          <div class="printer-device" aria-hidden="true">
+            <span class="printer-paper"></span><span class="printer-screen"></span><span class="printer-tray"></span>
+          </div>
+          <div class="printer-identity">
+            <p>${escaparHTML(i.ubicacion || 'Ubicación no asignada')}</p>
+            <h3>${escaparHTML(i.nombre)}</h3>
+            <span>${escaparHTML(i.modelo || 'Modelo sin registrar')}</span>
+          </div>
+        </div>
+        <div class="printer-metrics">
+          <div><span>Contador</span><strong>${contador}</strong><small>impresiones</small></div>
+          <div class="printer-load"><span>Actividad estimada</span><strong>${nivel}%</strong><i><b style="width:${nivel}%"></b></i></div>
+        </div>
+        <footer>
+          <button class="printer-card-action view" onclick="verDetalleImpresora(${i.id})">Ver detalle <span>↗</span></button>
+          ${!soloLectura ? `<button class="printer-card-action edit" onclick="abrirModalImpresora(${i.id})" aria-label="Editar ${escaparHTML(i.nombre)}">Editar</button>` : ''}
+          ${puedeEliminar ? `<button class="printer-card-action delete" onclick="eliminarImpresora(${i.id})" aria-label="Eliminar ${escaparHTML(i.nombre)}">×</button>` : ''}
+        </footer>
+      </article>`;
+  }).join('') || '<div class="fleet-empty"><strong>Sin equipos en esta vista</strong><span>Prueba con otro filtro o término de búsqueda.</span></div>';
 }
 
 async function verDetalleImpresora(id) {
@@ -1260,7 +1320,7 @@ async function abrirModalUsuario(id) {
     const lista = await fetchAPI('/usuarios');
     datos = lista.find(u => u.id === id) || datos;
   }
-  document.getElementById('modal-form-titulo').textContent = id ? 'Editar usuario' : 'Nuevo usuario';
+  document.getElementById('modal-form-titulo').textContent = id ? 'Editar perfil' : 'Nuevo perfil';
   document.getElementById('modal-form-contenido').innerHTML = `
     <form id="form-usuario" onsubmit="event.preventDefault(); guardarUsuario();" class="formulario">
       <div class="form-card-group">
@@ -1311,11 +1371,11 @@ async function guardarUsuario() {
   try {
     if (editandoUsuarioId) {
       await fetchAPI(`/usuarios/${editandoUsuarioId}`, { method: 'PUT', body: JSON.stringify(body) });
-      mostrarMensaje('Usuario actualizado');
+      mostrarMensaje('Perfil actualizado');
     } else {
       if (!pass) { mostrarMensaje('La contraseña es obligatoria', true); return; }
       await fetchAPI('/usuarios', { method: 'POST', body: JSON.stringify(body) });
-      mostrarMensaje('Usuario creado');
+      mostrarMensaje('Perfil creado');
     }
     cerrarModal('modal-formulario');
     cargarUsuarios();

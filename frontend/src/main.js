@@ -1,6 +1,7 @@
 import "./functional.css";
 import "./styles.css";
 import "./integration.css";
+import "./unified-ui.css";
 import "./real-filters.css";
 import * as THREE from "three";
 import { gsap } from "gsap";
@@ -18,7 +19,7 @@ app.innerHTML = await uiResponse.text();
 window.Chart = Chart;
 
 const functionalResponse = await fetch("/functional.html");
-if (!functionalResponse.ok) throw new Error("No se pudieron cargar los m?dulos funcionales de SICIS");
+if (!functionalResponse.ok) throw new Error("No se pudieron cargar los módulos funcionales de SICIS");
 const functionalDocument = new DOMParser().parseFromString(await functionalResponse.text(), "text/html");
 const stationMap = {
   dashboard: "dashboard",
@@ -30,13 +31,36 @@ const stationMap = {
   configuracion: "configuracion",
   auditoria: "auditoria",
 };
+const sectionPresentation = {
+  dashboard: { eyebrow: "VISIÓN DE SISTEMA", title: "Pulso operativo", description: "Estado de la flota, consumos y alertas que requieren atención." },
+  impresoras: { eyebrow: "FLOTA CONECTADA", title: "Equipos conectados", description: "Consulta el estado y la disponibilidad de cada equipo institucional." },
+  suministros: { eyebrow: "INVENTARIO ACTIVO", title: "Suministros", description: "Controla existencias, códigos y niveles críticos en un solo lugar." },
+  mantenimientos: { eyebrow: "CONTINUIDAD OPERATIVA", title: "Mantenimientos", description: "Planifica intervenciones y sigue cada servicio técnico." },
+  registros: { eyebrow: "TRAZA DIARIA", title: "Registro diario", description: "Historial de lecturas, uso de papel y consumo de tóner." },
+  reportes: { eyebrow: "INTELIGENCIA OPERATIVA", title: "Reportes", description: "Convierte la actividad de la flota en decisiones claras." },
+  configuracion: { eyebrow: "ADMINISTRACIÓN DE ACCESO", title: "Perfiles y accesos", description: "Crea cuentas, asigna responsabilidades y controla quién puede operar cada módulo." },
+  auditoria: { eyebrow: "TRAZABILIDAD", title: "Bitácora de auditoría", description: "Revisa las acciones relevantes registradas por el sistema." },
+};
 const functionalStations = document.querySelector("#functional-stations");
 functionalDocument.querySelectorAll(".seccion-panel").forEach((panel) => {
   const section = panel.id.replace("panel-", "");
   panel.classList.add("station");
   panel.classList.toggle("active", section === "dashboard");
   panel.dataset.station = stationMap[section];
-  panel.querySelector(".main-container")?.setAttribute("data-reveal", "");
+  const container = panel.querySelector(".main-container");
+  const presentation = sectionPresentation[section];
+  container?.setAttribute("data-reveal", "");
+  const legacyTitle = container?.querySelector(".titulo-principal");
+  const legacyDescription = container?.querySelector(":scope > .descripcion");
+  legacyTitle?.classList.add("legacy-section-title");
+  legacyDescription?.classList.add("legacy-section-description");
+  if (container && presentation) {
+    const intro = document.createElement("header");
+    intro.className = "section-intro";
+    intro.classList.toggle("profiles-intro", section === "configuracion");
+    intro.innerHTML = `<p>${presentation.eyebrow}</p><div><h1>${presentation.title}</h1><span>${presentation.description}</span></div>${section === "configuracion" ? '<button class="btn-principal profile-create-button" id="btn-nuevo-usuario" onclick="abrirModalUsuario()"><span aria-hidden="true">+</span> Crear perfil</button>' : ""}`;
+    container.prepend(intro);
+  }
   functionalStations.appendChild(panel);
 });
 functionalDocument.querySelectorAll(".modal-overlay").forEach((modal) => document.querySelector("#experience").appendChild(modal));
@@ -58,8 +82,8 @@ const stationMeta = {
   mantenimientos: { title: "Mantenimientos", kicker: "CONTINUIDAD OPERATIVA", index: "04" },
   registros: { title: "Registro diario", kicker: "ACTIVIDAD DE EQUIPOS", index: "05" },
   reportes: { title: "Reportes", kicker: "LECTURA DE DATOS", index: "06" },
-  configuracion: { title: "Usuarios", kicker: "ADMINISTRACI?N DE ACCESO", index: "07" },
-  auditoria: { title: "Auditor?a", kicker: "TRAZABILIDAD DEL SISTEMA", index: "08" },
+  configuracion: { title: "Perfiles y accesos", kicker: "ADMINISTRACIÓN DE ACCESO", index: "07" },
+  auditoria: { title: "Auditoría", kicker: "TRAZABILIDAD DEL SISTEMA", index: "08" },
 };
 
 const sceneCanvas = document.querySelector("#scene-canvas");
@@ -350,8 +374,9 @@ document.querySelector("#cinema-login").addEventListener("submit", async (event)
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || "No se pudo iniciar sesión");
-    feedback.textContent = "Acceso concedido.";
-    await window.sicisBootstrap?.();
+    feedback.textContent = "Preparando tu centro de control…";
+    const booted = await window.sicisBootstrap?.();
+    if (!booted) throw new Error("No se pudo preparar la sesión. Intenta nuevamente.");
   } catch (error) {
     feedback.textContent = error.message;
     button.disabled = false;
@@ -425,8 +450,7 @@ function navigateStation(next, trigger) {
 
   newStation.style.display = "block";
   newStation.style.opacity = "0";
-  const movement = 52 * direction;
-  const rotation = 3.5 * direction;
+  const movement = 38 * direction;
 
   updateNavigation(next, trigger);
 
@@ -447,11 +471,11 @@ function navigateStation(next, trigger) {
   });
 
   timeline
-    .to(oldStation, { x: -movement, z: -90, rotationY: -rotation, opacity: 0, duration: 0.28, ease: "power2.in" }, 0)
+    .to(oldStation, { x: -movement, scale: .985, opacity: 0, duration: 0.22, ease: "power2.in" }, 0)
     .fromTo(newStation,
-      { x: movement, z: -80, rotationY: rotation, opacity: 0 },
-      { x: 0, z: 0, rotationY: 0, opacity: 1, duration: 0.44, ease: "power3.out" },
-      0.16
+      { x: movement, scale: .985, opacity: 0 },
+      { x: 0, scale: 1, opacity: 1, duration: 0.36, ease: "power3.out", force3D: true },
+      0.1
     );
 }
 
@@ -466,8 +490,8 @@ document.querySelectorAll(".station-button").forEach((button) => {
   const markerState = Flip.getState(marker);
   destination.prepend(marker);
   Flip.from(markerState, {
-    duration: reducedMotion ? 0.01 : 0.62,
-    ease: "elastic.out(1,0.72)",
+    duration: reducedMotion ? 0.01 : 0.38,
+    ease: "power3.out",
     absolute: true,
   });
   gsap.to("#room-title", {
@@ -658,6 +682,7 @@ window.sicisCinematicLogout = async () => {
     const response = await fetch("/logout", { method: "POST", credentials: "include" });
     if (!response.ok) throw new Error("No se pudo cerrar la sesión");
     localStorage.removeItem("userInfo");
+    window.sicisResetSession?.();
   } catch (error) {
     document.body.classList.remove("logging-out");
     showToast(error.message);
@@ -685,6 +710,9 @@ window.sicisCinematicLogout = async () => {
   });
   document.querySelector("#room-title").textContent = stationMeta.dashboard.title;
   document.querySelector("#room-kicker").textContent = stationMeta.dashboard.kicker;
+  const loginButton = document.querySelector(".launch-button");
+  loginButton.disabled = false;
+  document.querySelector("#login-feedback").textContent = "Usa tus credenciales de SICIS";
   currentStation = "dashboard";
   stationLocked = false;
 

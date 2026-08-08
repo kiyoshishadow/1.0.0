@@ -13,7 +13,15 @@ const DATOS_PRUEBA = {
     { nombre: 'Impresora Sala Juntas', modelo: 'Brother HL-L3210CW', ubicacion: 'Sala de Juntas - Piso 3', estado: 'activa', contador_actual: 12450 },
     { nombre: 'Impresora Archivo', modelo: 'HP LaserJet Enterprise M507', ubicacion: 'Área de Archivo - Sótano', estado: 'inactiva', contador_actual: 45670 },
     { nombre: 'Impresora Producción', modelo: 'Xerox VersaLink C7000', ubicacion: 'Área de Producción - Piso 1', estado: 'mantenimiento', contador_actual: 89340 },
-    { nombre: 'Impresora TI', modelo: 'Epson EcoTank ET-4760', ubicacion: 'Departamento TI - Piso 4', estado: 'activa', contador_actual: 5670 }
+    { nombre: 'Impresora TI', modelo: 'Epson EcoTank ET-4760', ubicacion: 'Departamento TI - Piso 4', estado: 'activa', contador_actual: 5670 },
+    { nombre: 'Impresora Finanzas', modelo: 'Ricoh IM C3000', ubicacion: 'Finanzas - Piso 2', estado: 'activa', contador_actual: 28745 },
+    { nombre: 'Impresora Recursos Humanos', modelo: 'Canon imageRUNNER C3226i', ubicacion: 'Recursos Humanos - Piso 3', estado: 'activa', contador_actual: 19320 },
+    { nombre: 'Impresora Biblioteca', modelo: 'Brother MFC-L8900CDW', ubicacion: 'Biblioteca - Planta baja', estado: 'inactiva', contador_actual: 34780 },
+    { nombre: 'Impresora Dirección', modelo: 'HP Color LaserJet Enterprise M480f', ubicacion: 'Dirección General - Piso 5', estado: 'activa', contador_actual: 11280 },
+    { nombre: 'Impresora Bodega', modelo: 'Kyocera ECOSYS M3645idn', ubicacion: 'Bodega Central - Sótano', estado: 'mantenimiento', contador_actual: 76210 },
+    { nombre: 'Impresora Laboratorio', modelo: 'Epson WorkForce Pro WF-C5790', ubicacion: 'Laboratorio - Piso 4', estado: 'activa', contador_actual: 9650 },
+    { nombre: 'Impresora Comunicaciones', modelo: 'Xerox C315', ubicacion: 'Comunicaciones - Piso 2', estado: 'activa', contador_actual: 22490 },
+    { nombre: 'Impresora Atención Ciudadana', modelo: 'Lexmark MX431adn', ubicacion: 'Atención Ciudadana - Planta baja', estado: 'inactiva', contador_actual: 41860 }
   ],
   suministros: [
     { nombre: 'Toner Negro HP CF258A', tipo: 'toner', cantidad: 15, stock_minimo: 5, stock_maximo: 30, codigo: 'TON-HP-001', fecha_ingreso: '2025-01-15' },
@@ -99,7 +107,10 @@ async function insertarImpresoras() {
   for (const impresora of DATOS_PRUEBA.impresoras) {
     try {
       const result = await pool.query(
-        'INSERT INTO impresoras (nombre, modelo, ubicacion, estado, contador_actual) VALUES ($1, $2, $3, $4, $5) RETURNING id',
+        `INSERT INTO impresoras (nombre, modelo, ubicacion, estado, contador_actual)
+         SELECT $1::varchar, $2::varchar, $3::varchar, $4::varchar, $5::integer
+         WHERE NOT EXISTS (SELECT 1 FROM impresoras WHERE nombre = $1::varchar)
+         RETURNING id`,
         [impresora.nombre, impresora.modelo, impresora.ubicacion, impresora.estado, impresora.contador_actual]
       );
       if (result.rows.length > 0) {
