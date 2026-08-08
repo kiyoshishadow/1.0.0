@@ -559,8 +559,9 @@ function closePrinterDetail() {
 document.querySelectorAll(".printer-open").forEach((button) => {
   button.addEventListener("click", () => openPrinterDetail(button.closest(".printer-card")));
 });
-document.querySelector(".detail-close").addEventListener("click", closePrinterDetail);
-document.querySelector(".detail-backdrop").addEventListener("click", closePrinterDetail);
+// The printer detail control is optional in the integrated UI.
+document.querySelector(".detail-close")?.addEventListener("click", closePrinterDetail);
+document.querySelector(".detail-backdrop")?.addEventListener("click", closePrinterDetail);
 
 function bindTilt(element) {
   gsap.set(element, { transformPerspective: 1100, transformStyle: "preserve-3d" });
