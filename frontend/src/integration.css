@@ -170,12 +170,14 @@
 .station tbody td:last-child { border-radius: 0 13px 13px 0; }
 
 .modal-overlay {
+  display: none;
   position: fixed;
   z-index: 110;
   inset: 0;
   background: rgba(3, 17, 28, .64);
   backdrop-filter: blur(14px);
 }
+.modal-overlay.modal-open { display: block; }
 .modal {
   border: 1px solid rgba(150, 210, 239, .42);
   border-radius: 25px;
